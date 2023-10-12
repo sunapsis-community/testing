@@ -10,6 +10,7 @@
 <cfparam name="url.reportpath" 						default="">
 <cfparam name="url.propertiesFilename"			 	default="TEST.properties">
 <cfparam name="url.propertiesSummary"			 	default="false" type="boolean">
+<cfparam name="url.bundlesPattern" 					default="*.cfc">
 
 <cfparam name="url.coverageEnabled"					default="false" type="boolean">
 <cfparam name="url.coverageSonarQubeXMLOutputPath"	default="">
@@ -17,6 +18,8 @@
 <cfparam name="url.coveragePathToCapture"			default="">
 <cfparam name="url.coverageWhitelist"				default="">
 <cfparam name="url.coverageBlacklist"				default="/testbox">
+<!--- Enable batched code coverage reporter, useful for large test bundles which require spreading over multiple testbox run commands. --->
+<cfparam name="url.isBatched"						default="false">
 
 <cfscript>
 // prepare for tests for bundles or directories
@@ -29,6 +32,7 @@ testbox = new testbox.system.TestBox(
 			pathToCapture 	: url.coveragePathToCapture,
 			whitelist     	: url.coverageWhitelist,
 			blacklist     	: url.coverageBlacklist,
+			isBatched		: url.isBatched,
 			sonarQube     	: {
 				XMLOutputPath : url.coverageSonarQubeXMLOutputPath
 			},
@@ -36,13 +40,16 @@ testbox = new testbox.system.TestBox(
 				outputDir : url.coverageBrowserOutputDir
 			}
 		}
-	}
+	},
+	bundlesPattern = url.bundlesPattern
 );
 if( len( url.bundles ) ){
 	testbox.addBundles( url.bundles );
 }
 if( len( url.directory ) ){
-	testbox.addDirectories( url.directory, url.recurse );
+	for( dir in listToArray( url.directory ) ){
+		testbox.addDirectories( dir, url.recurse );
+	}
 }
 
 // Run Tests using correct reporter

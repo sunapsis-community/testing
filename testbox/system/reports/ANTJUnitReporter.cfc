@@ -18,9 +18,9 @@ component extends="BaseReporter" {
 	 * The report should return back in whatever format they desire and should set any
 	 * Specifc browser types if needed.
 	 *
-	 * @results The instance of the TestBox TestResult object to build a report on
-	 * @testbox The TestBox core object
-	 * @options A structure of options this reporter needs to build the report with
+	 * @results    The instance of the TestBox TestResult object to build a report on
+	 * @testbox    The TestBox core object
+	 * @options    A structure of options this reporter needs to build the report with
 	 * @justReturn Boolean flag that if set just returns the content with no content type and buffer reset
 	 */
 	any function runReport(
@@ -126,7 +126,7 @@ return;
 		// iterate over
 		for ( var thisSuite in arguments.suiteStats ) {
 			// build out full suite name
-			var fullName = encodeForXMLAttribute( arguments.parentName & thisSuite.name );
+			var fullName = arguments.parentName & thisSuite.name;
 
 			// build out test cases
 			for ( var thisSpecStat in thisSuite.specStats ) {
@@ -146,7 +146,7 @@ return;
 					r,
 					arguments.bundlestats,
 					thisSuite.suiteStats,
-					encodeForXMLAttribute( fullName & " " )
+					fullName & " "
 				);
 			}
 		}
@@ -176,9 +176,34 @@ return;
 		switch ( stats.status ) {
 			case "failed": {
 				out.append(
-					"<failure message=""#encodeForXMLAttribute( stats.failMessage )#""><![CDATA[
-					#stats.failorigin.toString()#
-					]]></failure>"
+					"<failure message=""#encodeForXMLAttribute( stats.failMessage )#""><![CDATA["
+				);
+				if ( isArray( stats.failOrigin ) && arrayLen( stats.failOrigin ) ) {
+					for ( var thisContext in stats.failOrigin ) {
+						if ( findNoCase( arguments.bundleStats.path, reReplace( thisContext.template, "(/|\\)", ".", "all" ) ) ) {
+							if ( structKeyExists( thisContext, "codePrintPlain" ) ) {
+								out.append(
+									"#thisContext.codePrintPlain#"
+								);
+							}
+							out.append(
+								"#thisContext.template#:#thisContext.line#"
+							);
+						}
+					}
+				}
+				if ( len( stats.failDetail ) ) {
+					out.append(
+						"Failure Details: #stats.failDetail#"
+					);
+				}
+				if ( len( stats.failExtendedInfo ) ) {
+					out.append(
+						"Failure Extended Info: #stats.failExtendedInfo#"
+					);
+				}
+				out.append(
+					"]]></failure>"
 				);
 				break;
 			}
@@ -188,7 +213,7 @@ return;
 			}
 			case "error": {
 				out.append(
-					"<error type=""#encodeForXMLAttribute( stats.error.type )#"" message=""#encodeForXMLAttribute( stats.error.message )#""><![CDATA[
+					"<error type=""#encodeForXMLAttribute( !isNull( stats.error.type ) ? stats.error.type : '' )#"" message=""#encodeForXMLAttribute( stats.error.message )#""><![CDATA[
 					#stats.error.stackTrace.toString()#
 					]]></error>"
 				);

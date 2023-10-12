@@ -9,16 +9,10 @@ component {
 	// Param default URL method runner.
 	param name="url.method" default="runRemote";
 
-	// MockBox mocking framework
-	variables.$mockBox         = this.$mockBox = new testbox.system.MockBox();
-	// MockData CFC framework
-	variables.$mockData        = this.$mockData = new testbox.system.modules.mockdatacfc.models.MockData();
 	// Assertions object
 	variables.$assert          = this.$assert = new testbox.system.Assertion();
 	// Custom Matchers
 	this.$customMatchers       = {};
-	// Utility object
-	this.$utility              = new testbox.system.util.Util();
 	// BDD Test Suites are stored here as an array so they are executed in order of definition
 	this.$suites               = [];
 	// A reverse lookup for the suite definitions
@@ -38,15 +32,9 @@ component {
 	// Focused Structures
 	this.$focusedTargets       = { "suites" : [], "specs" : [] };
 
-	// Setup Request Utilities
+	// Setup Request Utilities struct
 	if ( !request.keyExists( "testbox" ) ) {
-		request.testbox = {
-			"console"          : variables.console,
-			"debug"            : variables.debug,
-			"clearDebugBuffer" : variables.clearDebugBuffer,
-			"print"            : variables.print,
-			"println"          : variables.println
-		};
+		request.testbox = {};
 	}
 	// Setup request lookbacks for debugging purposes.
 	request.$testID = this.$testID;
@@ -62,7 +50,8 @@ component {
 
 	/**
 	 * Expect an exception from the testing spec
-	 * @type The type to expect
+	 *
+	 * @type  The type to expect
 	 * @regex Optional exception message regular expression to match, by default it matches .*
 	 */
 	function expectedException( type = "", regex = ".*" ){
@@ -72,6 +61,7 @@ component {
 
 	/**
 	 * Assert that the passed expression is true
+	 *
 	 * @facade
 	 */
 	function assert( required expression, message = "" ){
@@ -80,6 +70,7 @@ component {
 
 	/**
 	 * Fail an assertion
+	 *
 	 * @facade
 	 */
 	function fail( message = "", detail = "" ){
@@ -87,7 +78,18 @@ component {
 	}
 
 	/**
+	 * Skip a test
+	 *
+	 * @facade
+	 */
+	function skip( message = "", detail = "" ){
+		this.$assert.skip( argumentCollection = arguments );
+	}
+
+
+	/**
 	 * This function is used for BDD test suites to store the beforeEach() function to execute for a test suite group
+	 *
 	 * @body The closure function
 	 * @data Data bindings
 	 */
@@ -99,6 +101,7 @@ component {
 
 	/**
 	 * This function is used for BDD test suites to store the afterEach() function to execute for a test suite group
+	 *
 	 * @body The closure function
 	 * @data Data bindings
 	 */
@@ -110,6 +113,7 @@ component {
 
 	/**
 	 * This is used to surround a spec with your own closure code to provide a nice around decoration advice
+	 *
 	 * @body The closure function
 	 * @data Data bindings
 	 */
@@ -122,11 +126,11 @@ component {
 	/**
 	 * Focused Describe, only this should run
 	 *
-	 * @title The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 * @title    The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function fdescribe(
 		required string title,
@@ -143,11 +147,12 @@ component {
 	 * The way to describe BDD test suites in TestBox. The title is usually what you are testing or grouping of tests.
 	 * The body is the function that implements the suite.
 	 *
-	 * @title The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 * @title    The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @focused  A flag that tells TestBox to only run this suite and no other
 	 */
 	any function describe(
 		required string title,
@@ -209,10 +214,7 @@ component {
 		// Are we in a nested describe() block
 		if ( len( this.$suiteContext ) and this.$suiteContext neq arguments.title ) {
 			// Append this suite to the nested suite.
-			arrayAppend(
-				this.$suitesReverseLookup[ this.$suiteContext ].suites,
-				suite
-			);
+			arrayAppend( this.$suitesReverseLookup[ this.$suiteContext ].suites, suite );
 			this.$suitesReverseLookup[ arguments.title ] = suite;
 
 			// Setup parent reference
@@ -251,10 +253,7 @@ component {
 
 		// Are we focused?
 		if ( arguments.focused ) {
-			arrayAppend(
-				this.$focusedTargets.suites,
-				suite.slug & "/" & suite.name
-			);
+			arrayAppend( this.$focusedTargets.suites, suite.slug & "/" & suite.name );
 		}
 
 		// Restart spec index
@@ -266,11 +265,12 @@ component {
 	/**
 	 * The way to describe BDD test suites in TestBox. The story is an alias for describe usually use when you are writing using Gherkin-esque language
 	 * The body is the function that implements the suite.
-	 * @story The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @story    The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function story(
 		required string story,
@@ -279,20 +279,17 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return describe(
-			argumentCollection = arguments,
-			title              = "Story: " & arguments.story
-		);
+		return describe( argumentCollection = arguments, title = "Story: " & arguments.story );
 	}
 
 	/**
 	 * A focused Story
 	 *
-	 * @story The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 * @story    The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function fstory(
 		required string story,
@@ -301,20 +298,18 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return fdescribe(
-			argumentCollection = arguments,
-			title              = "Story: " & arguments.story
-		);
+		return fdescribe( argumentCollection = arguments, title = "Story: " & arguments.story );
 	}
 
 	/**
 	 * The way to describe BDD test suites in TestBox. The feature is an alias for describe usually use when you are writing in a Given-When-Then style
 	 * The body is the function that implements the suite.
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function feature(
 		required string feature,
@@ -323,20 +318,17 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return describe(
-			argumentCollection = arguments,
-			title              = "Feature: " & arguments.feature
-		);
+		return describe( argumentCollection = arguments, title = "Feature: " & arguments.feature );
 	}
 
 	/**
 	 * A Focused Feature
 	 *
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function ffeature(
 		required string feature,
@@ -345,20 +337,18 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return fdescribe(
-			argumentCollection = arguments,
-			title              = "Feature: " & arguments.feature
-		);
+		return fdescribe( argumentCollection = arguments, title = "Feature: " & arguments.feature );
 	}
 
 	/**
 	 * The way to describe BDD test suites in TestBox. The given is an alias for describe usually use when you are writing in a Given-When-Then style
 	 * The body is the function that implements the suite.
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function given(
 		required string given,
@@ -367,20 +357,17 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return describe(
-			argumentCollection = arguments,
-			title              = "Given " & arguments.given
-		);
+		return describe( argumentCollection = arguments, title = "Given " & arguments.given );
 	}
 
 	/**
 	 * A focused given
 	 *
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function fgiven(
 		required string given,
@@ -389,20 +376,18 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return fdescribe(
-			argumentCollection = arguments,
-			title              = "Given " & arguments.given
-		);
+		return fdescribe( argumentCollection = arguments, title = "Given " & arguments.given );
 	}
 
 	/**
 	 * The way to describe BDD test suites in TestBox. The scenario is an alias for describe usually use when you are writing in a Given-When-Then style
 	 * The body is the function that implements the suite.
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function scenario(
 		required string scenario,
@@ -411,20 +396,17 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return describe(
-			argumentCollection = arguments,
-			title              = "Scenario: " & arguments.scenario
-		);
+		return describe( argumentCollection = arguments, title = "Scenario: " & arguments.scenario );
 	}
 
 	/**
 	 * A focused scenario
 	 *
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function fscenario(
 		required string scenario,
@@ -433,20 +415,18 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return fdescribe(
-			argumentCollection = arguments,
-			title              = "Scenario: " & arguments.scenario
-		);
+		return fdescribe( argumentCollection = arguments, title = "Scenario: " & arguments.scenario );
 	}
 
 	/**
 	 * The way to describe BDD test suites in TestBox. The when is an alias for scenario usually use when you are writing in a Given-When-Then style
 	 * The body is the function that implements the suite.
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function when(
 		required string when,
@@ -455,20 +435,17 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return describe(
-			argumentCollection = arguments,
-			title              = "When " & arguments.when
-		);
+		return describe( argumentCollection = arguments, title = "When " & arguments.when );
 	}
 
 	/**
 	 * A focused when
 	 *
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function fwhen(
 		required string when,
@@ -477,20 +454,17 @@ component {
 		boolean asyncAll = false,
 		any skip         = false
 	){
-		return fdescribe(
-			argumentCollection = arguments,
-			title              = "When " & arguments.when
-		);
+		return fdescribe( argumentCollection = arguments, title = "When " & arguments.when );
 	}
 
 	/**
 	 * A focused `it` where only focused it's are executed
 	 *
-	 * @title The title of this spec
-	 * @body The closure that represents the test
+	 * @title  The title of this spec
+	 * @body   The closure that represents the test
 	 * @labels The list or array of labels this spec belongs to
-	 * @skip A flag or a closure that tells TestBox to skip this spec test from testing if true. If this is a closure it must return boolean.
-	 * @data A struct of data you would like to bind into the spec so it can be later passed into the executing body function
+	 * @skip   A flag or a closure that tells TestBox to skip this spec test from testing if true. If this is a closure it must return boolean.
+	 * @data   A struct of data you would like to bind into the spec so it can be later passed into the executing body function
 	 */
 	any function fit(
 		required string title,
@@ -507,11 +481,12 @@ component {
 	 * The it() function describes a spec or a test in TestBox.  The body argument is the closure that implements
 	 * the test which usually contains one or more expectations that test the state of the code under test.
 	 *
-	 * @title The title of this spec
-	 * @body The closure that represents the test
-	 * @labels The list or array of labels this spec belongs to
-	 * @skip A flag or a closure that tells TestBox to skip this spec test from testing if true. If this is a closure it must return boolean.
-	 * @data A struct of data you would like to bind into the spec so it can be later passed into the executing body function
+	 * @title   The title of this spec
+	 * @body    The closure that represents the test
+	 * @labels  The list or array of labels this spec belongs to
+	 * @skip    A flag or a closure that tells TestBox to skip this spec test from testing if true. If this is a closure it must return boolean.
+	 * @data    A struct of data you would like to bind into the spec so it can be later passed into the executing body function
+	 * @focused A flag that tells TestBox to only run this spec and no other
 	 */
 	any function it(
 		required string title,
@@ -564,18 +539,12 @@ component {
 		}
 
 		// Attach this spec to the incoming context array of specs
-		arrayAppend(
-			this.$suitesReverseLookup[ this.$suiteContext ].specs,
-			spec
-		);
+		arrayAppend( this.$suitesReverseLookup[ this.$suiteContext ].specs, spec );
 
 		// Are we focused?
 		if ( arguments.focused ) {
 			var thisSuite = this.$suitesReverseLookup[ this.$suiteContext ];
-			arrayAppend(
-				this.$focusedTargets.specs,
-				thisSuite.slug & "/" & thisSuite.name & "/" & spec.name
-			);
+			arrayAppend( this.$focusedTargets.specs, thisSuite.slug & "/" & thisSuite.name & "/" & spec.name );
 		}
 
 		return this;
@@ -584,11 +553,12 @@ component {
 	/**
 	 * The then() function describes a spec or a test in TestBox and is an alias for it.  The body argument is the closure that implements
 	 * the test which usually contains one or more expectations that test the state of the code under test.
-	 * @then The title of this spec
-	 * @body The closure that represents the test
+	 *
+	 * @then   The title of this spec
+	 * @body   The closure that represents the test
 	 * @labels The list or array of labels this spec belongs to
-	 * @skip A flag or a closure that tells TestBox to skip this spec test from testing if true. If this is a closure it must return boolean.
-	 * @data A struct of data you would like to bind into the spec so it can be later passed into the executing body function
+	 * @skip   A flag or a closure that tells TestBox to skip this spec test from testing if true. If this is a closure it must return boolean.
+	 * @data   A struct of data you would like to bind into the spec so it can be later passed into the executing body function
 	 */
 	any function then(
 		required string then,
@@ -597,20 +567,17 @@ component {
 		any skip    = false,
 		struct data = {}
 	){
-		return it(
-			argumentCollection = arguments,
-			title              = "Then " & arguments.then
-		);
+		return it( argumentCollection = arguments, title = "Then " & arguments.then );
 	}
 
 	/**
 	 * A focused then
 	 *
-	 * @then The title of this spec
-	 * @body The closure that represents the test
+	 * @then   The title of this spec
+	 * @body   The closure that represents the test
 	 * @labels The list or array of labels this spec belongs to
-	 * @skip A flag or a closure that tells TestBox to skip this spec test from testing if true. If this is a closure it must return boolean.
-	 * @data A struct of data you would like to bind into the spec so it can be later passed into the executing body function
+	 * @skip   A flag or a closure that tells TestBox to skip this spec test from testing if true. If this is a closure it must return boolean.
+	 * @data   A struct of data you would like to bind into the spec so it can be later passed into the executing body function
 	 */
 	any function fthen(
 		required string then,
@@ -619,17 +586,15 @@ component {
 		any skip    = false,
 		struct data = {}
 	){
-		return fit(
-			argumentCollection = arguments,
-			title              = "Then " & arguments.then
-		);
+		return fit( argumentCollection = arguments, title = "Then " & arguments.then );
 	}
 
 	/**
 	 * This is a convenience method that makes sure the test suite is skipped from execution
-	 * @title The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @title    The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
 	 */
 	any function xdescribe(
@@ -644,10 +609,11 @@ component {
 
 	/**
 	 * This is a convenience method that makes sure the test spec is skipped from execution
-	 * @title The title of this spec
-	 * @body The closure that represents the test
+	 *
+	 * @title  The title of this spec
+	 * @body   The closure that represents the test
 	 * @labels The list or array of labels this spec belongs to
-	 * @data A struct of data you would like to bind into the spec so it can be later passed into the executing body function
+	 * @data   A struct of data you would like to bind into the spec so it can be later passed into the executing body function
 	 */
 	any function xit(
 		required string title,
@@ -662,11 +628,12 @@ component {
 	/**
 	 * The way to describe BDD test suites in TestBox. The story is an alias for describe usually use when you are writing using Gherkin-esque language
 	 * The body is the function that implements the suite.
-	 * @story The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @story    The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function xstory(
 		required string story,
@@ -681,11 +648,12 @@ component {
 	/**
 	 * The way to describe BDD test suites in TestBox. The feature is an alias for describe usually use when you are writing in a Given-When-Then style
 	 * The body is the function that implements the suite.
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function xfeature(
 		required string feature,
@@ -700,11 +668,12 @@ component {
 	/**
 	 * The way to describe BDD test suites in TestBox. The given is an alias for describe usually use when you are writing in a Given-When-Then style
 	 * The body is the function that implements the suite.
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function xgiven(
 		required string given,
@@ -719,11 +688,12 @@ component {
 	/**
 	 * The way to describe BDD test suites in TestBox. The scenario is an alias for describe usually use when you are writing in a Given-When-Then style
 	 * The body is the function that implements the suite.
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function xscenario(
 		required string scenario,
@@ -738,11 +708,12 @@ component {
 	/**
 	 * The way to describe BDD test suites in TestBox. The when is an alias for scenario usually use when you are writing in a Given-When-Then style
 	 * The body is the function that implements the suite.
-	 * @feature The name of this test suite
-	 * @body The closure that represents the test suite
-	 * @labels The list or array of labels this suite group belongs to
+	 *
+	 * @feature  The name of this test suite
+	 * @body     The closure that represents the test suite
+	 * @labels   The list or array of labels this suite group belongs to
 	 * @asyncAll If you want to parallelize the execution of the defined specs in this suite group.
-	 * @skip A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
+	 * @skip     A flag or a closure that tells TestBox to skip this suite group from testing if true. If this is a closure it must return boolean.
 	 */
 	any function xwhen(
 		required string when,
@@ -756,10 +727,11 @@ component {
 
 	/**
 	 * This is a convenience method that makes sure the test spec is skipped from execution
-	 * @title The title of this spec
-	 * @body The closure that represents the test
+	 *
+	 * @title  The title of this spec
+	 * @body   The closure that represents the test
 	 * @labels The list or array of labels this spec belongs to
-	 * @data A struct of data you would like to bind into the spec so it can be later passed into the executing body function
+	 * @data   A struct of data you would like to bind into the spec so it can be later passed into the executing body function
 	 */
 	any function xthen(
 		required string then,
@@ -773,15 +745,12 @@ component {
 
 	/**
 	 * Start an expectation expression. This returns an instance of Expectation so you can work with its matchers.
+	 *
 	 * @actual The actual value, it is not required as it can be null.
 	 */
 	Expectation function expect( any actual ){
 		// build an expectation
-		var oExpectation = new Expectation(
-			spec       = this,
-			assertions = this.$assert,
-			mockbox    = this.$mockbox
-		);
+		var oExpectation = new Expectation( spec = this, assertions = this.$assert );
 
 		// Store the actual data
 		if ( !isNull( arguments.actual ) ) {
@@ -793,10 +762,7 @@ component {
 		// Do we have any custom matchers to add to this expectation?
 		if ( !structIsEmpty( this.$customMatchers ) ) {
 			for ( var thisMatcher in this.$customMatchers ) {
-				oExpectation.registerMatcher(
-					thisMatcher,
-					this.$customMatchers[ thisMatcher ]
-				);
+				oExpectation.registerMatcher( thisMatcher, this.$customMatchers[ thisMatcher ] );
 			}
 		}
 
@@ -806,6 +772,7 @@ component {
 	/**
 	 * Start a collection expectation expression. This returns an instance of CollectionExpectation
 	 * so you can work with its collection-unrolling matches (delegating to Expectation).
+	 *
 	 * @actual The actual value, it should be an array or a struct.
 	 */
 	CollectionExpectation function expectAll( required any actual ){
@@ -818,17 +785,14 @@ component {
 
 	/**
 	 * Add custom matchers to your expectations
+	 *
 	 * @matchers The structure of custom matcher functions to register or a path or instance of a CFC containing all the matcher functions to register
 	 */
 	function addMatchers( required any matchers ){
 		// register structure
 		if ( isStruct( arguments.matchers ) ) {
 			// register the custom matchers with override
-			structAppend(
-				this.$customMatchers,
-				arguments.matchers,
-				true
-			);
+			structAppend( this.$customMatchers, arguments.matchers, true );
 			return this;
 		}
 
@@ -856,17 +820,14 @@ component {
 
 	/**
 	 * Add custom assertions to the $assert object
+	 *
 	 * @assertions The structure of custom assertion functions to register or a path or instance of a CFC containing all the assertion functions to register
 	 */
 	function addAssertions( required any assertions ){
 		// register structure
 		if ( isStruct( arguments.assertions ) ) {
 			// register the custom matchers with override
-			structAppend(
-				this.$assert,
-				arguments.assertions,
-				true
-			);
+			structAppend( this.$assert, arguments.assertions, true );
 			return this;
 		}
 
@@ -896,10 +857,11 @@ component {
 
 	/**
 	 * Run a test remotely, only useful if the spec inherits from this class. Useful for remote executions.
+	 *
 	 * @testSuites A list or array of suite names that are the ones that will be executed ONLY!
-	 * @testSpecs A list or array of test names that are the ones that will be executed ONLY!
-	 * @reporter The type of reporter to run the test with
-	 * @labels A list or array of labels to apply to the testing.
+	 * @testSpecs  A list or array of test names that are the ones that will be executed ONLY!
+	 * @reporter   The type of reporter to run the test with
+	 * @labels     A list or array of labels to apply to the testing.
 	 */
 	remote function runRemote(
 		string testSpecs  = "",
@@ -912,27 +874,23 @@ component {
 		getPageContext().getResponse().setContentType( "text/html" );
 		// run tests
 		var runner = new testbox.system.TestBox(
-			bundles  = "#getMetadata( this ).name#",
-			labels   = arguments.labels,
-			reporter = arguments.reporter,
-			options  = { coverage : { enabled : false } }
+			bundles : "#getMetadata( this ).name#",
+			labels  : arguments.labels,
+			reporter: arguments.reporter,
+			options : { coverage : { enabled : false } }
 		);
 		// Produce report
-		writeOutput(
-			runner.run(
-				testSuites = arguments.testSuites,
-				testSpecs  = arguments.testSpecs
-			)
-		);
+		writeOutput( runner.run( testSuites = arguments.testSuites, testSpecs = arguments.testSpecs ) );
 	}
 
 	/**
 	 * Run a BDD test in this target CFC
-	 * @spec The spec definition to test
-	 * @suite The suite definition this spec belongs to
+	 *
+	 * @spec        The spec definition to test
+	 * @suite       The suite definition this spec belongs to
 	 * @testResults The testing results object
-	 * @suiteStats The suite stats that the incoming spec definition belongs to
-	 * @runner The runner calling this BDD test
+	 * @suiteStats  The suite stats that the incoming spec definition belongs to
+	 * @runner      The runner calling this BDD test
 	 */
 	function runSpec(
 		required spec,
@@ -943,10 +901,7 @@ component {
 	){
 		try {
 			// init spec tests
-			var specStats = arguments.testResults.startSpecStats(
-				arguments.spec.name,
-				arguments.suiteStats
-			);
+			var specStats          = arguments.testResults.startSpecStats( arguments.spec.name, arguments.suiteStats );
 			// init consolidated spec labels
 			var consolidatedLabels = arguments.spec.labels;
 			var md                 = getMetadata( this );
@@ -967,7 +922,10 @@ component {
 					||
 					(
 						// Are we in the focused Spec?
-						arrayLen( this.$focusedTargets.specs ) && arrayFindNoCase( this.$focusedTargets.specs, name )
+						arrayLen( this.$focusedTargets.specs ) && arrayFindNoCase(
+							this.$focusedTargets.specs,
+							name
+						)
 						||
 						// Are we in the focused Suite?
 						arrayLen( this.$focusedTargets.suites ) && runner.isSuiteFocused(
@@ -983,14 +941,8 @@ component {
 			if (
 				!arguments.spec.skip && // Not skipping
 				isSpecFocused( arguments.suite.slug & "/" & arguments.suite.name & "/" & arguments.spec.name ) && // Is the spec focused
-				arguments.runner.canRunLabel(
-					consolidatedLabels,
-					arguments.testResults
-				) && // In label or no labels
-				arguments.runner.canRunSpec(
-					arguments.spec.name,
-					arguments.testResults
-				) // In test results
+				arguments.runner.canRunLabel( consolidatedLabels, arguments.testResults ) && // In label or no labels
+				arguments.runner.canRunSpec( arguments.spec.name, arguments.testResults ) // In test results
 			) {
 				// setup the current executing spec for debug purposes
 				this.$currentExecutingSpec = arguments.suite.slug & "/" & arguments.suite.name & "/" & arguments.spec.name;
@@ -1016,7 +968,29 @@ component {
 				arguments.testResults.incrementSpecStat( type = "skipped", stats = specStats );
 			}
 		}
-		// Catch assertion failures
+		// Catch Skip() calls
+		catch ( "TestBox.SkipSpec" e ) {
+			// store spec status
+			specStats.status      = "Skipped";
+			specStats.failMessage = e.message;
+			specStats.failDetail  = e.detail;
+			// Increment recursive pass stats
+			arguments.testResults.incrementSpecStat( type = "skipped", stats = specStats );
+			// Module call backs
+			arguments.runner
+				.getTestBox()
+				.announceToModules(
+					"onSpecSkipped",
+					[
+						arguments.spec,
+						specStats,
+						arguments.suite,
+						arguments.suiteStats,
+						arguments.testResults
+					]
+				);
+		}
+		// Catch Fail() calls
 		catch ( "TestBox.AssertionFailed" e ) {
 			// store spec status and debug data
 			specStats.status           = "Failed";
@@ -1028,6 +1002,20 @@ component {
 
 			// Increment recursive pass stats
 			arguments.testResults.incrementSpecStat( type = "fail", stats = specStats );
+			// Module call backs
+			arguments.runner
+				.getTestBox()
+				.announceToModules(
+					"onSpecFailure",
+					[
+						e,
+						arguments.spec,
+						specStats,
+						arguments.suite,
+						arguments.suiteStats,
+						arguments.testResults
+					]
+				);
 		}
 		// Catch errors
 		catch ( any e ) {
@@ -1042,6 +1030,21 @@ component {
 
 			// Increment recursive pass stats
 			arguments.testResults.incrementSpecStat( type = "error", stats = specStats );
+
+			// Module call backs
+			arguments.runner
+				.getTestBox()
+				.announceToModules(
+					"onSpecError",
+					[
+						e,
+						arguments.spec,
+						specStats,
+						arguments.suite,
+						arguments.suiteStats,
+						arguments.testResults
+					]
+				);
 		} finally {
 			// Complete spec testing
 			arguments.testResults.endStats( specStats );
@@ -1052,10 +1055,18 @@ component {
 
 	/**
 	 * Execute the before each closures in order for a suite and spec
+	 *
 	 * @suite The suite definition
-	 * @spec The spec definition
+	 * @spec  The spec definition
 	 */
 	BaseSpec function runBeforeEachClosures( required suite, required spec ){
+		// re-bind request utilities to the currently executing test before they may be invoked
+		request.testbox.console          = () => variables.console( argumentCollection = arguments );
+		request.testbox.debug            = () => variables.debug( argumentCollection = arguments );
+		request.testbox.clearDebugBuffer = () => variables.clearDebugBuffer( argumentCollection = arguments );
+		request.testbox.print            = () => variables.print( argumentCollection = arguments );
+		request.testbox.println          = () => variables.println( argumentCollection = arguments );
+
 		var reverseTree = [];
 
 		// do we have nested suites? If so, traverse the tree to build reverse execution map
@@ -1072,21 +1083,15 @@ component {
 		}
 
 		// Incorporate annotated methods
-		arrayEach(
-			this.$utility.getAnnotatedMethods(
-				annotation = "beforeEach",
-				metadata   = getMetadata( this )
-			),
-			function( item ){
-				arrayAppend(
-					reverseTree,
-					{
-						beforeEach     : this[ arguments.item.name ],
-						beforeEachData : {}
-					}
-				);
-			}
-		);
+		arrayEach( getUtility().getAnnotatedMethods( annotation = "beforeEach", metadata = getMetadata( this ) ), function( item ){
+			arrayAppend(
+				reverseTree,
+				{
+					beforeEach     : this[ arguments.item.name ],
+					beforeEachData : {}
+				}
+			);
+		} );
 
 		// sort tree backwards
 		arraySort( reverseTree, function( a, b ){
@@ -1095,25 +1100,20 @@ component {
 
 		// Execute it
 		arrayEach( reverseTree, function( item ){
-			item.beforeEach(
-				currentSpec = spec.name,
-				data        = item.beforeEachData
-			);
+			item.beforeEach( currentSpec = spec.name, data = item.beforeEachData );
 		} );
 
 		// execute beforeEach()
-		arguments.suite.beforeEach(
-			currentSpec = arguments.spec.name,
-			data        = arguments.suite.beforeEachData
-		);
+		arguments.suite.beforeEach( currentSpec = arguments.spec.name, data = arguments.suite.beforeEachData );
 
 		return this;
 	}
 
 	/**
 	 * Execute the around each closures in order for a suite and spec
+	 *
 	 * @suite The suite definition
-	 * @spec The spec definition
+	 * @spec  The spec definition
 	 */
 	BaseSpec function runAroundEachClosures( required suite, required spec ){
 		var reverseTree = [
@@ -1146,25 +1146,19 @@ component {
 		}
 
 		// Discover annotated methods and add to reverseTree
-		arrayEach(
-			this.$utility.getAnnotatedMethods(
-				annotation = "aroundEach",
-				metadata   = getMetadata( this )
-			),
-			function( item ){
-				arrayAppend(
-					reverseTree,
-					{
-						name   : arguments.item.name,
-						body   : this[ arguments.item.name ],
-						data   : {},
-						labels : {},
-						order  : 0,
-						skip   : false
-					}
-				);
-			}
-		);
+		arrayEach( getUtility().getAnnotatedMethods( annotation = "aroundEach", metadata = getMetadata( this ) ), function( item ){
+			arrayAppend(
+				reverseTree,
+				{
+					name   : arguments.item.name,
+					body   : this[ arguments.item.name ],
+					data   : {},
+					labels : {},
+					order  : 0,
+					skip   : false
+				}
+			);
+		} );
 
 		// Sort the closures from the oldest parent down to the current spec
 		arraySort( reverseTree, function( a, b ){
@@ -1185,9 +1179,10 @@ component {
 
 	/**
 	 * Generates a specs stack for executions
+	 *
 	 * @closures The array of closures data to build
-	 * @suite The target suite
-	 * @spec The target spec
+	 * @suite    The target suite
+	 * @spec     The target spec
 	 */
 	function generateAroundEachClosuresStack(
 		array closures,
@@ -1241,49 +1236,39 @@ component {
 
 	/**
 	 * Execute the after each closures in order for a suite and spec
+	 *
 	 * @suite The suite definition
-	 * @spec The spec definition
+	 * @spec  The spec definition
 	 */
 	BaseSpec function runAfterEachClosures( required suite, required spec ){
 		// execute nearest afterEach()
-		arguments.suite.afterEach(
-			currentSpec = arguments.spec.name,
-			data        = arguments.suite.afterEachData
-		);
+		arguments.suite.afterEach( currentSpec = arguments.spec.name, data = arguments.suite.afterEachData );
 
 		// do we have nested suites? If so, traverse and execute life-cycle methods up the tree backwards
 		var parentSuite = arguments.suite.parentRef;
 		while ( !isSimpleValue( parentSuite ) ) {
-			parentSuite.afterEach(
-				currentSpec = arguments.spec.name,
-				data        = parentSuite.afterEachData
-			);
+			parentSuite.afterEach( currentSpec = arguments.spec.name, data = parentSuite.afterEachData );
 			parentSuite = parentSuite.parentRef;
 		}
 
-		arrayEach(
-			this.$utility.getAnnotatedMethods(
-				annotation = "afterEach",
-				metadata   = getMetadata( this )
-			),
-			function( item ){
-				invoke(
-					this,
-					item.name,
-					{ currentSpec : spec.name, data : {} }
-				);
-			}
-		);
+		arrayEach( getUtility().getAnnotatedMethods( annotation = "afterEach", metadata = getMetadata( this ) ), function( item ){
+			invoke(
+				this,
+				item.name,
+				{ currentSpec : spec.name, data : {} }
+			);
+		} );
 
 		return this;
 	}
 
 	/**
 	 * Runs a xUnit style test method in this target CFC
-	 * @spec The spec definition to test
+	 *
+	 * @spec        The spec definition to test
 	 * @testResults The testing results object
-	 * @suiteStats The suite stats that the incoming spec definition belongs to
-	 * @runner The runner calling this BDD test
+	 * @suiteStats  The suite stats that the incoming spec definition belongs to
+	 * @runner      The runner calling this BDD test
 	 */
 	function runTestMethod(
 		required spec,
@@ -1293,22 +1278,13 @@ component {
 	){
 		try {
 			// init spec tests
-			var specStats = arguments.testResults.startSpecStats(
-				arguments.spec.name,
-				arguments.suiteStats
-			);
+			var specStats = arguments.testResults.startSpecStats( arguments.spec.name, arguments.suiteStats );
 
 			// Verify we can execute
 			if (
 				!arguments.spec.skip &&
-				arguments.runner.canRunLabel(
-					arguments.spec.labels,
-					arguments.testResults
-				) &&
-				arguments.runner.canRunSpec(
-					arguments.spec.name,
-					arguments.testResults
-				)
+				arguments.runner.canRunLabel( arguments.spec.labels, arguments.testResults ) &&
+				arguments.runner.canRunSpec( arguments.spec.name, arguments.testResults )
 			) {
 				// Reset expected exceptions: Only works on synchronous testing.
 				this.$expectedException    = {};
@@ -1325,12 +1301,7 @@ component {
 					invoke( this, arguments.spec.name );
 
 					// Where we expecting an exception and it did not throw?
-					if (
-						hasExpectedException(
-							arguments.spec.name,
-							arguments.runner
-						)
-					) {
+					if ( hasExpectedException( arguments.spec.name, arguments.runner ) ) {
 						$assert.fail(
 							"Method did not throw expected exception: [#this.$expectedException.toString()#]"
 						);
@@ -1338,22 +1309,11 @@ component {
 					// else all good.
 				} catch ( Any e ) {
 					// do we have expected exception? else rethrow it
-					if (
-						!hasExpectedException(
-							arguments.spec.name,
-							arguments.runner
-						)
-					) {
+					if ( !hasExpectedException( arguments.spec.name, arguments.runner ) ) {
 						rethrow;
 					}
 					// if not the expected exception, then fail it
-					if (
-						!isExpectedException(
-							e,
-							arguments.spec.name,
-							arguments.runner
-						)
-					) {
+					if ( !isExpectedException( e, arguments.spec.name, arguments.runner ) ) {
 						$assert.fail(
 							"Method did not throw expected exception: [#this.$expectedException.toString()#], actual exception [type:#e.type#][message:#e.message#]"
 						);
@@ -1376,7 +1336,16 @@ component {
 				arguments.testResults.incrementSpecStat( type = "skipped", stats = specStats );
 			}
 		}
-		// Catch assertion failures
+		// Catch skip() calls
+		catch ( "TestBox.SkipSpec" e ) {
+			// store spec status
+			specStats.status      = "Skipped";
+			specStats.failMessage = e.message;
+			specStats.failDetail  = e.detail;
+			// Increment recursive pass stats
+			arguments.testResults.incrementSpecStat( type = "skipped", stats = specStats );
+		}
+		// Catch Fail() calls
 		catch ( "TestBox.AssertionFailed" e ) {
 			// store spec status and debug data
 			specStats.status           = "Failed";
@@ -1408,6 +1377,7 @@ component {
 
 	/**
 	 * Send some information to the console via writedump( output="console" )
+	 *
 	 * @var The data to send
 	 * @top Apply a top to the dump, by default it does 9999 levels
 	 */
@@ -1422,10 +1392,11 @@ component {
 
 	/**
 	 * Debug some information into the TestBox debugger array buffer
-	 * @var The data to debug
-	 * @label The label to add to the debug entry
+	 *
+	 * @var      The data to debug
+	 * @label    The label to add to the debug entry
 	 * @deepCopy By default we do not duplicate the incoming information, but you can :)
-	 * @top The top numeric number to dump on the screen in the report, defaults to 999
+	 * @top      The top numeric number to dump on the screen in the report, defaults to 999
 	 */
 	any function debug(
 		any var,
@@ -1444,7 +1415,7 @@ component {
 		// compute label?
 		if ( !len( trim( arguments.label ) ) ) {
 			// Check if executing spec is set, else most likely this is called from a request scoped debug method
-			arguments.label = !isNull( this.$currentExecutingSpec ) ? this.$currentExecutingSpec : 'request';
+			arguments.label = !isNull( this.$currentExecutingSpec ) ? this.$currentExecutingSpec : "request";
 		}
 		// add to debug output
 		arrayAppend(
@@ -1460,7 +1431,7 @@ component {
 	}
 
 	/**
-	 *  Clear the debug array buffer
+	 * Clear the debug array buffer
 	 */
 	any function clearDebugBuffer(){
 		arrayClear( this.$debugBuffer );
@@ -1468,7 +1439,7 @@ component {
 	}
 
 	/**
-	 *  Get the debug array buffer from scope
+	 * Get the debug array buffer from scope
 	 */
 	array function getDebugBuffer(){
 		return this.$debugBuffer;
@@ -1493,8 +1464,9 @@ component {
 
 	/**
 	 * Make a private method on a CFC public with or without a new name and returns the target object
-	 * @target The target object to expose the method
-	 * @method The private method to expose
+	 *
+	 * @target  The target object to expose the method
+	 * @method  The private method to expose
 	 * @newName If passed, it will expose the method with this name, else just uses the same name
 	 */
 	any function makePublic(
@@ -1503,7 +1475,7 @@ component {
 		string newName = ""
 	){
 		// decorate it
-		this.$utility.getMixerUtil().start( arguments.target );
+		getUtility().getMixerUtil().start( arguments.target );
 		// expose it
 		arguments.target.exposeMixin( arguments.method, arguments.newName );
 
@@ -1512,9 +1484,10 @@ component {
 
 	/**
 	 * Get a private property
-	 * @target The target to get a property from
-	 * @name The name of the property to retrieve
-	 * @scope The scope to get it from, defaults to 'variables' scope
+	 *
+	 * @target       The target to get a property from
+	 * @name         The name of the property to retrieve
+	 * @scope        The scope to get it from, defaults to 'variables' scope
 	 * @defaultValue A default value if the property does not exist
 	 */
 	any function getProperty(
@@ -1534,33 +1507,83 @@ component {
 	 * First line are the query columns separated by commas. Then do a consequent rows separated by line breaks separated by | to denote columns.
 	 */
 	function querySim( required queryData ){
-		return this.$mockBox.querySim( arguments.queryData );
+		return getMockBox().querySim( arguments.queryData );
 	}
 
 	/**
-	 * Use MockDataCFC to mock whatever data you want.  This funnles to MocData.mock()
+	 * Use MockDataCFC to mock whatever data you want by executing the `mock()` function in MockDataCFC
 	 *
 	 * @return The mock data you desire sir!
 	 */
 	function mockData(){
-		return this.$mockData.mock( argumentCollection = arguments );
+		return getMockDataCFC().mock( argumentCollection = arguments );
 	}
 
 	/**
-	 * Get a reference to the MockBox engine
-	 * @generationPath The path to generate the mocks if passed, else uses default location.
+	 * Get the MockData CFC object
+	 *
+	 * @return testbox.system.modules.mockdatacfc.models.MockData
 	 */
-	function getMockBox( string generationPath ){
-		if ( structKeyExists( arguments, "generationPath" ) ) {
-			this.$mockBox.setGenerationPath( arguments.generationPath );
+	function getMockDataCFC(){
+		// Lazy Load it
+		if ( isNull( variables.$mockDataCFC ) ) {
+			variables.$mockDataCFC = new testbox.system.modules.mockdatacfc.models.MockData();
 		}
+		return variables.$mockDataCFC;
+	}
+
+	/**
+	 * Get the TestBox utility object
+	 *
+	 * @return testbox.system.util.Util
+	 */
+	function getUtility(){
+		// Lazy Load it
+		if ( isNull( variables.$utility ) ) {
+			variables.$utility = new testbox.system.util.Util();
+		}
+		return variables.$utility;
+	}
+
+	/**
+	 * Get the TestBox Env  object
+	 *
+	 * @return testbox.system.util.Env
+	 */
+	function getEnv(){
+		// Lazy Load it
+		if ( isNull( variables.$env ) ) {
+			variables.$env = new testbox.system.util.Env();
+		}
+		return variables.$env;
+	}
+
+	/**
+	 * Get a reference to the MockBox Engine
+	 *
+	 * @generationPath The path to generate the mocks if passed, else uses default location.
+	 *
+	 * @return testbox.system.MockBox
+	 */
+	function getMockBox( string generationPath = "" ){
+		// Lazy Load it
+		if ( isNull( this.$mockbox ) ) {
+			variables.$mockbox = this.$mockbox = new testbox.system.MockBox( arguments.generationPath );
+		} else {
+			// Generation path updates
+			if ( len( arguments.generationPath ) ) {
+				this.$mockBox.setGenerationPath( arguments.generationPath );
+			}
+		}
+
 		return this.$mockBox;
 	}
 
 	/**
 	 * Create an empty mock
-	 * @className The class name of the object to mock. The mock factory will instantiate it for you
-	 * @object The object to mock, already instantiated
+	 *
+	 * @className   The class name of the object to mock. The mock factory will instantiate it for you
+	 * @object      The object to mock, already instantiated
 	 * @callLogging Add method call logging for all mocked methods. Defaults to true
 	 */
 	function createEmptyMock(
@@ -1568,49 +1591,49 @@ component {
 		any object,
 		boolean callLogging = true
 	){
-		return this.$mockBox.createEmptyMock( argumentCollection = arguments );
+		return getMockBox().createEmptyMock( argumentCollection = arguments );
 	}
 
 	/**
 	 * Create a mock with or without clearing implementations, usually not clearing means you want to build object spies
-	 * @className The class name of the object to mock. The mock factory will instantiate it for you
-	 * @object The object to mock, already instantiated
+	 *
+	 * @className    The class name of the object to mock. The mock factory will instantiate it for you
+	 * @object       The object to mock, already instantiated
 	 * @clearMethods If true, all methods in the target mock object will be removed. You can then mock only the methods that you want to mock. Defaults to false
-	 * @callLogging Add method call logging for all mocked methods. Defaults to true
+	 * @callLogging  Add method call logging for all mocked methods. Defaults to true
 	 */
 	function createMock(
 		string className,
 		any object,
 		boolean clearMethods = false
-		boolean callLogging   =true
+		boolean callLogging  =true
 	){
-		return this.$mockBox.createMock( argumentCollection = arguments );
+		return getMockBox().createMock( argumentCollection = arguments );
 	}
 
 	/**
 	 * Prepares an already instantiated object to act as a mock for spying and much more
-	 * @object The object to mock, already instantiated
+	 *
+	 * @object      The object to mock, already instantiated
 	 * @callLogging Add method call logging for all mocked methods. Defaults to true
 	 */
-	function prepareMock(
-		any object,
-		boolean callLogging = true
-	){
-		return this.$mockBox.prepareMock( argumentCollection = arguments );
+	function prepareMock( any object, boolean callLogging = true ){
+		return getMockBox().prepareMock( argumentCollection = arguments );
 	}
 
 	/**
 	 * Create an empty stub object that you can use for mocking
+	 *
 	 * @callLogging Add method call logging for all mocked methods. Defaults to true
-	 * @extends Make the stub extend from certain CFC
-	 * @implements Make the stub adhere to an interface
+	 * @extends     Make the stub extend from certain CFC
+	 * @implements  Make the stub adhere to an interface
 	 */
 	function createStub(
 		boolean callLogging = true,
 		string extends      = "",
 		string implements   = ""
 	){
-		return this.$mockBox.createStub( argumentCollection = arguments );
+		return getMockBox().createStub( argumentCollection = arguments );
 	}
 
 	// Closure Stub
@@ -1663,11 +1686,9 @@ component {
 			else if (
 				len( this.$expectedException.type ) &&
 				arguments.exception.type eq this.$expectedException.type &&
-				arrayLen(
-					reMatchNoCase(
-						this.$expectedException.regex,
-						arguments.exception.message
-					)
+				(
+					this.$expectedException.regex == ".*"
+					|| arrayLen( reMatchNoCase( this.$expectedException.regex, arguments.exception.message ) )
 				)
 			) {
 				results = true;
@@ -1675,12 +1696,7 @@ component {
 			// Message regex then only
 			else if (
 				this.$expectedException.regex neq ".*" &&
-				arrayLen(
-					reMatchNoCase(
-						this.$expectedException.regex,
-						arguments.exception.message
-					)
-				)
+				arrayLen( reMatchNoCase( this.$expectedException.regex, arguments.exception.message ) )
 			) {
 				results = true;
 			}

@@ -8,7 +8,8 @@ component {
 
 	/**
 	 * Constructor
-	 * @bundles
+	 *
+	 * @bundles  
 	 * @testSpecs
 	 */
 	function init( required bundles, testSpecs = "" ){
@@ -21,6 +22,7 @@ component {
 
 	/**
 	 * Get the results output in a specific mode
+	 *
 	 * @mode The mode of the output
 	 */
 	any function getResultsOutput( mode = "simple" ){
@@ -46,10 +48,7 @@ component {
 
 		var tb = new testbox.system.TestBox( bundles = variables.bundles );
 
-		return tb.run(
-			testSpecs = variables.testSpecs,
-			reporter  = arguments.mode
-		);
+		return tb.run( testSpecs = variables.testSpecs, reporter = arguments.mode );
 	}
 
 }

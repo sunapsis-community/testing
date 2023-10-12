@@ -21,10 +21,7 @@ component
 	 * @options The options for this runner
 	 * @testbox The TestBox class reference
 	 */
-	function init(
-		required struct options,
-		required testBox
-	){
+	function init( required struct options, required testBox ){
 		variables.options = arguments.options;
 		variables.testbox = arguments.testbox;
 
@@ -33,9 +30,10 @@ component
 
 	/**
 	 * Execute a BDD test on the incoming target and store the results in the incoming test results
-	 * @target The target bundle CFC to test
+	 *
+	 * @target      The target bundle CFC to test
 	 * @testResults The test results object to keep track of results for this test case
-	 * @callbacks A struct of listener callbacks or a CFC with callbacks for listening to progress of the testing: onBundleStart,onBundleEnd,onSuiteStart,onSuiteEnd,onSpecStart,onSpecEnd
+	 * @callbacks   A struct of listener callbacks or a CFC with callbacks for listening to progress of the testing: onBundleStart,onBundleEnd,onSuiteStart,onSuiteEnd,onSpecStart,onSpecEnd
 	 */
 	any function run(
 		required any target,
@@ -47,20 +45,14 @@ component
 		var bundleName = ( structKeyExists( targetMD, "displayName" ) ? targetMD.displayname : targetMD.name );
 
 		// Execute the suite descriptors
-		arguments.target.run(
-			testResults = arguments.testResults,
-			testbox     = variables.testbox
-		);
+		arguments.target.run( testResults = arguments.testResults, testbox = variables.testbox );
 
 		// Discover the test suite data to use for testing
 		var testSuites      = getTestSuites( arguments.target, targetMD );
 		var testSuitesCount = arrayLen( testSuites );
 
 		// Start recording stats for this bundle
-		var bundleStats = arguments.testResults.startBundleStats(
-			bundlePath = targetMD.name,
-			name       = bundleName
-		);
+		var bundleStats = arguments.testResults.startBundleStats( bundlePath = targetMD.name, name = bundleName );
 
 		// Verify we can run this bundle
 		if (
@@ -79,16 +71,10 @@ component
 				// find any methods annotated 'beforeAll' and execute them
 				var beforeAllAnnotationMethods = variables.testbox
 					.getUtility()
-					.getAnnotatedMethods(
-						annotation = "beforeAll",
-						metadata   = getMetadata( arguments.target )
-					);
+					.getAnnotatedMethods( annotation = "beforeAll", metadata = getMetadata( arguments.target ) );
 
 				for ( var beforeAllMethod in beforeAllAnnotationMethods ) {
-					invoke(
-						arguments.target,
-						"#beforeAllMethod.name#"
-					);
+					invoke( arguments.target, "#beforeAllMethod.name#" );
 				}
 
 				// Iterate over found test suites and test them, if nested suites, then this will recurse as well.
@@ -101,13 +87,24 @@ component
 							thisSuite
 						);
 					}
+
+					// Module call backs
+					variables.testbox.announceToModules(
+						"onSuiteStart",
+						[
+							arguments.target,
+							arguments.testResults,
+							thisSuite
+						]
+					);
+
 					// Test Suite
 					testSuite(
-						target      = arguments.target,
-						suite       = thisSuite,
-						testResults = arguments.testResults,
-						bundleStats = bundleStats,
-						callbacks   = arguments.callbacks
+						target     : arguments.target,
+						suite      : thisSuite,
+						testResults: arguments.testResults,
+						bundleStats: bundleStats,
+						callbacks  : arguments.callbacks
 					);
 
 					// verify call backs
@@ -118,6 +115,15 @@ component
 							thisSuite
 						);
 					}
+					// Module call backs
+					variables.testbox.announceToModules(
+						"onSuiteEnd",
+						[
+							arguments.target,
+							arguments.testResults,
+							thisSuite
+						]
+					);
 				}
 
 				// execute afterAll() for this bundle, no matter how many suites they have.
@@ -128,25 +134,27 @@ component
 				// find any methods annotated 'afterAll' and execute them
 				var afterAllAnnotationMethods = variables.testbox
 					.getUtility()
-					.getAnnotatedMethods(
-						annotation = "afterAll",
-						metadata   = getMetadata( arguments.target )
-					);
+					.getAnnotatedMethods( annotation = "afterAll", metadata = getMetadata( arguments.target ) );
 
 				for ( var afterAllMethod in afterAllAnnotationMethods ) {
-					invoke(
-						arguments.target,
-						"#afterAllMethod.name#"
-					);
+					invoke( arguments.target, "#afterAllMethod.name#" );
 				}
 			} catch ( Any e ) {
 				bundleStats.globalException = e;
 				// For a righteous man falls seven times, and rises (tests) again :)
 				// The amount doesn't matter, nothing can run at this point, failure with before/after aspects that need fixing
 				bundleStats.totalError      = -1;
-				arguments.testResults.incrementStat(
-					type  = "error",
-					count = bundleStats.totalError
+				arguments.testResults.incrementStat( type = "error", count = bundleStats.totalError );
+
+				// Module call backs
+				variables.testbox.announceToModules(
+					"onSuiteError",
+					[
+						e,
+						arguments.target,
+						arguments.testResults,
+						isNull( thisSuite ) ? {} : thisSuite
+					]
 				);
 			}
 		}
@@ -162,12 +170,13 @@ component
 
 	/**
 	 * Test the incoming suite definition
-	 * @target The target bundle CFC
-	 * @method The method definition to test
+	 *
+	 * @target      The target bundle CFC
+	 * @method      The method definition to test
 	 * @testResults The testing results object
 	 * @bundleStats The bundle stats this suite belongs to
 	 * @parentStats If this is a nested test suite, then it will have some parentStats goodness
-	 * @callbacks The CFC or struct of callback listener methods
+	 * @callbacks   The CFC or struct of callback listener methods
 	 */
 	private function testSuite(
 		required target,
@@ -197,9 +206,7 @@ component
 		arguments.bundleStats.totalSpecs += suiteStats.totalSpecs;
 		arguments.bundleStats.totalSuites++;
 		// increment global suites + specs
-		arguments.testResults
-			.incrementSuites()
-			.incrementSpecs( suiteStats.totalSpecs );
+		arguments.testResults.incrementSuites().incrementSpecs( suiteStats.totalSpecs );
 
 		// Verify we can execute the incoming suite via skipping or labels
 		if (
@@ -243,6 +250,16 @@ component
 								attributes.thisSpec
 							);
 						}
+						// Module call backs
+						variables.testbox.announceToModules(
+							"onSpecStart",
+							[
+								thread.target,
+								thread.testResults,
+								attributes.suite,
+								attributes.thisSpec
+							]
+						);
 
 						// execute the test within the context of the spec target due to lucee closure bug, move back once it is resolved.
 						thread.target.runSpec(
@@ -262,6 +279,16 @@ component
 								attributes.thisSpec
 							);
 						}
+						// Module call backs
+						variables.testbox.announceToModules(
+							"onSpecEnd",
+							[
+								thread.target,
+								thread.testResults,
+								attributes.suite,
+								attributes.thisSpec
+							]
+						);
 					}
 				} else {
 					// verify call backs
@@ -273,14 +300,24 @@ component
 							thisSpec
 						);
 					}
+					// Module call backs
+					variables.testbox.announceToModules(
+						"onSpecStart",
+						[
+							arguments.target,
+							arguments.testResults,
+							arguments.suite,
+							thisSpec
+						]
+					);
 
 					// execute the test within the context of the spec target due to lucee closure bug, move back once it is resolved.
 					thread.target.runSpec(
-						spec        = thisSpec,
-						suite       = arguments.suite,
-						testResults = thread.testResults,
-						suiteStats  = thread.suiteStats,
-						runner      = this
+						spec       : thisSpec,
+						suite      : arguments.suite,
+						testResults: thread.testResults,
+						suiteStats : thread.suiteStats,
+						runner     : this
 					);
 
 					// verify call backs
@@ -292,6 +329,16 @@ component
 							thisSpec
 						);
 					}
+					// Module call backs
+					variables.testbox.announceToModules(
+						"onSpecEnd",
+						[
+							arguments.target,
+							arguments.testResults,
+							arguments.suite,
+							thisSpec
+						]
+					);
 				}
 			}
 			// end loop over specs
@@ -353,6 +400,15 @@ component
 			suiteStats.status = "Skipped";
 			arguments.bundleStats.totalSkipped += suiteStats.totalSpecs;
 			arguments.testResults.incrementStat( "skipped", suiteStats.totalSpecs );
+			// Module call backs
+			variables.testbox.announceToModules(
+				"onSuiteSkipped",
+				[
+					arguments.target,
+					arguments.testResults,
+					arguments.suite
+				]
+			);
 		}
 
 		// Finalize the suite stats
@@ -365,7 +421,8 @@ component
 
 	/**
 	 * Get all the test suites in the passed in bundle
-	 * @target The target to get the suites from
+	 *
+	 * @target   The target to get the suites from
 	 * @targetMD The metdata of the target
 	 */
 	private array function getTestSuites( required target, required targetMD ){

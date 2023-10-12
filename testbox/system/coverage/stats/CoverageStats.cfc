@@ -12,9 +12,10 @@ component accessors=true {
 	}
 
 	/**
+	 *
 	 * @qryCoverageData A query object containing coverage data
 	 *
-	 * @Returns struct of stats
+	 * @return struct of stats
 	 */
 	struct function generateStats( required query qryCoverageData ){
 		var stats = {
@@ -42,7 +43,6 @@ component accessors=true {
 			SELECT	sum( numCoveredLines ) as sumCoveredLines ,
 					sum( numExecutableLines ) as sumExecutableLines
 			FROM qryData
-			GROUP BY filePath
 			",
 			{},
 			{ dbtype : "query" }

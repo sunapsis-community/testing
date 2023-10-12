@@ -22,16 +22,13 @@ component accessors=true {
 	/**
 	 * Configure the main data collection class.
 	 *
-	 * @returns true if enabled, false if disabled
+	 * @return true if enabled, false if disabled
 	 */
 	boolean function configure(){
 		try {
-			variables.fragentClass = createObject(
-				"java",
-				"com.intergral.fusionreactor.agent.Agent"
-			);
+			variables.fragentClass = createObject( "java", "com.intergral.fusionreactor.agent.Agent" );
 			// Do a quick test to ensure the line performance instrumentation is loaded.  This will return null for non-supported versions of FR
-			var instrumentation = fragentClass.getAgentInstrumentation().get( "cflpi" );
+			var instrumentation    = fragentClass.getAgentInstrumentation().get( "cflpi" );
 		} catch ( Any e ) {
 			return false;
 		}
@@ -41,15 +38,10 @@ component accessors=true {
 		}
 
 		// for file globbing
-		variables.pathPatternMatcher = new PathPatternMatcher();
+		variables.pathPatternMatcher = new testbox.system.modules.globber.models.PathPatternMatcher();
 
 		// Detect server
-		if (
-			listFindNoCase(
-				"Railo,Lucee",
-				server.coldfusion.productname
-			)
-		) {
+		if ( listFindNoCase( "Railo,Lucee", server.coldfusion.productname ) ) {
 			variables.templateCompiler = new TemplateCompiler_Lucee();
 		} else {
 			variables.templateCompiler = new TemplateCompiler_Adobe();
@@ -78,6 +70,7 @@ component accessors=true {
 
 	/**
 	 * End the capture of data.  Clears up memory and optionally turns off line profiling
+	 *
 	 * @leaveLineProfilingOn Set to true to leave line profiling enabled on the server
 	 */
 	CoverageGenerator function endCapture( leaveLineProfilingOn = false ){
@@ -98,11 +91,12 @@ component accessors=true {
 	}
 
 	/**
-	 * @pathToCapture The full path to a folder of code.  Searched recursively
-	 * @whitelist Comma-delimited list or array of file paths to include
-	 * @blacklist Comma-delimited list or array of file paths to exclude
 	 *
-	 * @Returns query of data
+	 * @pathToCapture The full path to a folder of code.  Searched recursively
+	 * @whitelist     Comma-delimited list or array of file paths to include
+	 * @blacklist     Comma-delimited list or array of file paths to exclude
+	 *
+	 * @return query of data
 	 */
 	query function generateData(
 		required string pathToCapture,
@@ -118,12 +112,7 @@ component accessors=true {
 		}
 
 		// Get a recursive list of all CFM and CFC files in  project root.
-		var fileList = directoryList(
-			arguments.pathToCapture,
-			true,
-			"path",
-			"*.cf?"
-		);
+		var fileList = directoryList( arguments.pathToCapture, true, "path", "*.cf?" );
 
 		// start data structure
 		var qryData = queryNew(
@@ -206,7 +195,11 @@ component accessors=true {
 
 
 					// On Adobe, the first line of CFCs seems to always report as being executable but not running whether it's a comment or a component declaration
-					if ( theFile.right( 4 ) == ".cfc" && currentLineNum == 1 && !covered && line.startsWith( "/" & "*" ) ) {
+					if (
+						theFile.right( 4 ) == ".cfc" && currentLineNum == 1 && !covered && line.startsWith(
+							"/" & "*"
+						)
+					) {
 						continue;
 					}
 
@@ -245,12 +238,7 @@ component accessors=true {
 					}
 
 					// Count as covered any cffunction or cfargument tag where the previous line ran.
-					if (
-						!covered && reFindNoCase(
-							"^<cf(function|argument)",
-							trim( line )
-						) && previousLineRan
-					) {
+					if ( !covered && reFindNoCase( "^<cf(function|argument)", trim( line ) ) && previousLineRan ) {
 						covered = previousLineRan;
 					}
 
@@ -287,7 +275,7 @@ component accessors=true {
 	 * Determines if a path is valid given the whitelist and black list.  White and black lists
 	 * use standard file globbing patterns.
 	 *
-	 * @path The relative path to check.
+	 * @path      The relative path to check.
 	 * @whitelist paths to allow
 	 * @blacklist paths to exclude
 	 */
@@ -297,11 +285,21 @@ component accessors=true {
 		required array blacklist
 	){
 		// Check whitelist
-		if ( arrayLen( arguments.whitelist ) && !pathPatternMatcher.matchPatterns( arguments.whitelist, arguments.path ) ) {
+		if (
+			arrayLen( arguments.whitelist ) && !pathPatternMatcher.matchPatterns(
+				arguments.whitelist,
+				arguments.path
+			)
+		) {
 			return false;
 		}
 		// Check blacklist
-		if ( arrayLen( arguments.blacklist ) && pathPatternMatcher.matchPatterns( arguments.blacklist, arguments.path ) ) {
+		if (
+			arrayLen( arguments.blacklist ) && pathPatternMatcher.matchPatterns(
+				arguments.blacklist,
+				arguments.path
+			)
+		) {
 			return false;
 		}
 

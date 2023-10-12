@@ -8,6 +8,7 @@ component {
 
 	/**
 	 * Get the mixer utility object instance. It lazy loads into variables scope for faster execution next time.
+	 *
 	 * @return MixerUtil
 	 */
 	function getMixerUtil(){
@@ -20,6 +21,7 @@ component {
 
 	/**
 	 * Convert an array to struct argument notation
+	 *
 	 * @input The array to convert
 	 */
 	struct function arrayToStruct( required array input ){
@@ -36,16 +38,14 @@ component {
 
 	/**
 	 * Get the last modified date of a file
+	 *
 	 * @filename The target
 	 *
 	 * @return date
 	 */
 	function fileLastModified( required filename ){
 		var objFile = createObject( "java", "java.io.File" ).init(
-			javacast(
-				"string",
-				getAbsolutePath( arguments.filename )
-			)
+			javacast( "string", getAbsolutePath( arguments.filename ) )
 		);
 		// Calculate adjustments fot timezone and daylightsavindtime
 		var offset = ( ( getTimezoneInfo().utcHourOffset ) + 1 ) * -3600;
@@ -59,6 +59,7 @@ component {
 
 	/**
 	 * Rip an extension of a filename
+	 *
 	 * @filename The target
 	 */
 	string function ripExtension( required filename ){
@@ -67,6 +68,7 @@ component {
 
 	/**
 	 * Turn any system path, either relative or absolute, into a fully qualified one
+	 *
 	 * @path The target
 	 */
 	string function getAbsolutePath( required path ){
@@ -75,6 +77,31 @@ component {
 			return arguments.path;
 		}
 		return expandPath( arguments.path );
+	}
+
+	/**
+	 * Add a CFML Mapping to the running engine
+	 *
+	 * @name     The name of the mapping
+	 * @path     The path of the mapping
+	 * @mappings A struct of mappings to incorporate instead of one-offs
+	 */
+	Util function addMapping( string name, string path, struct mappings ){
+		var engineMappingHelper = getEngineMappingHelper();
+
+		if ( !isNull( arguments.mappings ) ) {
+			engineMappingHelper.addMappings( arguments.mappings );
+		} else {
+			// Add / registration
+			if ( left( arguments.name, 1 ) != "/" ) {
+				arguments.name = "/#arguments.name#";
+			}
+
+			// Add mapping
+			engineMappingHelper.addMapping( arguments.name, arguments.path );
+		}
+
+		return this;
 	}
 
 	/**
@@ -114,9 +141,10 @@ component {
 
 	/**
 	 * Create a URL safe slug from a string
-	 * @str The target
+	 *
+	 * @str       The target
 	 * @maxLength The maximum number of characters for the slug
-	 * @allow A regex safe list of additional characters to allow
+	 * @allow     A regex safe list of additional characters to allow
 	 */
 	string function slugify(
 		required string str,
@@ -146,13 +174,11 @@ component {
 
 	/**
 	 * Find all methods on a given metadata and it's parents with a given annotation
+	 *
 	 * @annotation The annotation name to look for on methods
-	 * @metadata The metadata to search (recursively) for the provided annotation
+	 * @metadata   The metadata to search (recursively) for the provided annotation
 	 */
-	public array function getAnnotatedMethods(
-		required string annotation,
-		required struct metadata
-	){
+	array function getAnnotatedMethods( required string annotation, required struct metadata ){
 		var lifecycleMethods = [];
 
 		if ( structKeyExists( arguments.metadata, "functions" ) ) {
@@ -164,18 +190,28 @@ component {
 		}
 
 		if ( structKeyExists( arguments.metadata, "extends" ) ) {
-			arrayEach(
-				getAnnotatedMethods(
-					arguments.annotation,
-					arguments.metadata.extends
-				),
-				function( item ){
-					arrayAppend( lifecycleMethods, arguments.item );
-				}
-			);
+			arrayEach( getAnnotatedMethods( arguments.annotation, arguments.metadata.extends ), function( item ){
+				arrayAppend( lifecycleMethods, arguments.item );
+			} );
 		}
 
 		return lifecycleMethods;
+	}
+
+	/**
+	 * Get the appropriate engine mapping helper for the current engine
+	 */
+	private function getEngineMappingHelper(){
+		// Lazy load the helper
+		if ( isNull( variables.engineMappingHelper ) ) {
+			// Detect server
+			if ( listFindNoCase( "Lucee", server.coldfusion.productname ) ) {
+				variables.engineMappingHelper = new LuceeMappingHelper();
+			} else {
+				variables.engineMappingHelper = new CFMappingHelper();
+			}
+		}
+		return variables.engineMappingHelper;
 	}
 
 }

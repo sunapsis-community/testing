@@ -38,13 +38,14 @@ component accessors="true" {
 	 */
 	function init( coverageOptions = {} ){
 		// Default options
-		variables.coverageOptions = setDefaultOptions( coverageOptions );
-		variables.coverageEnabled = coverageOptions.enabled;
+		variables.coverageOptions = setDefaultOptions( arguments.coverageOptions );
+		variables.coverageEnabled = variables.coverageOptions.enabled;
 
 		// If disabled in config, go no further
-		if ( coverageEnabled ) {
-			variables.coverageGenerator = new data.CoverageGenerator();
+		if ( getCoverageEnabled() ) {
+			variables.coverageGenerator = loadCoverageGenerator();
 			variables.coverageEnabled   = coverageGenerator.configure();
+			variables.coverageReporter  = loadCoverageReporter();
 		}
 
 		return this;
@@ -54,7 +55,7 @@ component accessors="true" {
 	 * Reset system for a new test.  Turns on line coverage and resets in-memory statistics
 	 */
 	CoverageService function beginCapture(){
-		if ( coverageEnabled ) {
+		if ( getCoverageEnabled() ) {
 			coverageGenerator.beginCapture();
 		}
 
@@ -67,7 +68,7 @@ component accessors="true" {
 	 * @leaveLineProfilingOn Set to true to leave line profiling enabled on the server
 	 */
 	CoverageService function endCapture( leaveLineProfilingOn = false ){
-		if ( coverageEnabled ) {
+		if ( getCoverageEnabled() ) {
 			coverageGenerator.endCapture( leaveLineProfilingOn );
 		}
 
@@ -89,20 +90,17 @@ component accessors="true" {
 			var qryCoverageData = generateCoverageData( getCoverageOptions() );
 
 			// SonarQube Integration
-			var sonarQubeResults = processSonarQube(
-				qryCoverageData,
-				getCoverageOptions()
-			);
+			var sonarQubeResults = processSonarQube( qryCoverageData, getCoverageOptions() );
+
+			if ( getCoverageOptions().isBatched ) {
+				qryCoverageData = variables.coverageReporter.processCoverageReport( qryCoverageData );
+			}
 
 			// Generate Stats
 			var stats = processStats( qryCoverageData );
 
 			// Generate code browser
-			var browserResults = processCodeBrowser(
-				qryCoverageData,
-				stats,
-				getCoverageOptions()
-			);
+			var browserResults = processCodeBrowser( qryCoverageData, stats, getCoverageOptions() );
 
 			results.setCoverageEnabled( true );
 			results.setCoverageData( {
@@ -119,10 +117,7 @@ component accessors="true" {
 	/**
 	 * Render HTML representation of statistics
 	 */
-	function renderStats(
-		required struct coverageData,
-		boolean fullPage = true
-	){
+	function renderStats( required struct coverageData, boolean fullPage = true ){
 		var stats         = coverageData.stats;
 		var pathToCapture = getCoverageOptions().pathToCapture;
 
@@ -162,7 +157,11 @@ component accessors="true" {
 		// Clean up the browser output dir if it is set
 		if ( len( opts.browser.outputDir ) ) {
 			// Expand the output dir if it looks like it needs it
-			if ( !directoryExists( opts.browser.outputDir ) && directoryExists( expandPath( opts.browser.outputDir ) ) ) {
+			if (
+				!directoryExists( opts.browser.outputDir ) && directoryExists(
+					expandPath( opts.browser.outputDir )
+				)
+			) {
 				opts.browser.outputDir = expandPath( opts.browser.outputDir );
 			}
 
@@ -191,6 +190,9 @@ component accessors="true" {
 		}
 		if ( isNull( opts.blacklist ) ) {
 			opts.blacklist = "";
+		}
+		if ( isNull( opts.isBatched ) ) {
+			opts.isBatched = false;
 		}
 
 		// If no path provided to capture
@@ -246,10 +248,7 @@ component accessors="true" {
 	/**
 	 * Write out SonarQube generic coverage XML file
 	 */
-	private function processSonarQube(
-		required query qryCoverageData,
-		required struct opts
-	){
+	private function processSonarQube( required query qryCoverageData, required struct opts ){
 		if ( len( opts.sonarQube.XMLOutputPath ) ) {
 			// Create XML generator
 			var sonarQube = new sonarqube.SonarQube();
@@ -257,10 +256,7 @@ component accessors="true" {
 			sonarQube.setFormatXML( true );
 
 			// Generate XML (writes file and returns string
-			sonarQube.generateXML(
-				qryCoverageData,
-				opts.sonarQube.XMLOutputPath
-			);
+			sonarQube.generateXML( qryCoverageData, opts.sonarQube.XMLOutputPath );
 			return opts.sonarQube.XMLOutputPath;
 		}
 		return "";
@@ -282,11 +278,7 @@ component accessors="true" {
 		// Only generate browser if there's a generation path specified
 		if ( len( opts.browser.outputDir ) ) {
 			var codeBrowser = new browser.CodeBrowser( opts.coverageTresholds );
-			codeBrowser.generateBrowser(
-				qryCoverageData,
-				stats,
-				opts.browser.outputDir
-			);
+			codeBrowser.generateBrowser( qryCoverageData, stats, opts.browser.outputDir );
 			return opts.browser.outputDir;
 		}
 		return "";
@@ -303,6 +295,21 @@ component accessors="true" {
 		} else {
 			return path.replace( "\", "/", "all" ).replace( "//", "/", "all" );
 		}
+	}
+
+
+	/**
+	 * Acquire a CoverageGenerator component which does the hard work.
+	 */
+	private component function loadCoverageGenerator(){
+		return new data.CoverageGenerator();
+	}
+
+	/**
+	 * Acquire a CoverageGenerator component which does the hard work.
+	 */
+	private component function loadCoverageReporter(){
+		return new CoverageReporter( { outputDir : getCoverageOptions().browser.outputDir } );
 	}
 
 }
