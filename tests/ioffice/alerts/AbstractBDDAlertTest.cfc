@@ -1,5 +1,5 @@
 import ioffice.alerts.*;
-import tests.utils.*;
+import testbox.tests.utils.*;
 
 
 /**
@@ -43,23 +43,30 @@ component extends="testbox.system.BaseSpec" {
 
                         var expectedResult = (testData.level == THREATLEVEL_NONE)
                             ? "the student should not be on the alert."
-                            : "the student should be on the alert at #testData.level#.";
+                            : "the student should be on the alert at #getThreatLevelName(testData.level)#.";
                         then(expectedResult, function(data) {
                             data.idnumber = setupData(data);
 
                             var alert = getAlertService();
                             var alertXML = alert.getAlertsByIndividual(data.idnumber);
+
                             if( data.level != THREATLEVEL_NONE ) {
                                 expect(alertXML).toHaveRecordsAtLevel(data.level);
+                                if ( data.keyExists("message") ) {
+                                    expect(alertXML).toHaveMessage(data.message);
+                                }
                             }
                             else {
                                 expect(alertXML).notToHaveRecords();
                             }
 
-                            for(var level=THREATLEVEL_LOW; level >= THREATLEVEL_SEVERE; level--) {
+                            for ( var level=THREATLEVEL_LOW; level >= THREATLEVEL_SEVERE; level-- ) {
                                 alertXML = '<dataset type="Alert">' & alert.getAlertsByThreatLevel(level) & '</dataset>';
                                 if( level == data.level ) {
                                     expect(alertXML).toHaveRecords();
+                                    if ( data.keyExists("message") ) {
+                                        expect(alertXML).toHaveMessage(data.message);
+                                    }
                                 }
                                 else {
                                     expect(alertXML).notToHaveRecords();
@@ -73,22 +80,39 @@ component extends="testbox.system.BaseSpec" {
 
     }
 
+	private string function getThreatLevelName(required numeric threatLevel) {
+		switch( threatLevel ) {
+			case 1:
+				return "Severe (red)";
+			case 2:
+				return "High (orange)";
+			case 3:
+				return "Elevated (yellow)";
+			case 4:
+				return "Guarded (blue)";
+			case 5:
+				return "Low (green)";
+			default:
+				return "Unknown";
+		}
+	}
+
     /**
-     * @doc_abstract
+     * @abstract
      */
     private string function getServiceID() {
         return "NullAlertService";
     }
 
     /**
-     * @doc_abstract
+     * @abstract
      */
     private array function getSpecs() {
         return [];
     }
 
     /**
-     * @doc_abstract
+     * @abstract
      * Sets up the data to test the alert
      * @return the idnumber of the student being prepped.
      */
