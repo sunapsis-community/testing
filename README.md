@@ -48,7 +48,7 @@ When a spec is run, it runs several tests:
 2. `getAlertType` runs correctly
 3. run the alert in student record mode
     * make sure the student is on the alert at the expected level when you open up the student record
-    * if a `message` iss specified in the spec, ensure that it matches the expected value.
+    * if a `message` is specified in the spec, ensure that it matches the expected value.
 4. run the alert for each level in Alert Management mode
     * make sure the student is on the alert at the expected level
     * make sure the student is not on the alert at any other levels
